@@ -2,6 +2,8 @@
 name = "rusty_skelform_macroquad"
 version = "0.1.0"
 edition = "2021"
+description = "SkelForm Macroquad runtime"
+license = "MIT"
 
 [dependencies]
 macroquad = "0.4.14"
