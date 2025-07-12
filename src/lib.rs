@@ -179,29 +179,24 @@ pub fn animate(
     let mut props: Vec<Bone>;
     let mut frame = 0;
     if options.as_ref().unwrap().frame == None {
-        (props, frame) = animate_by_time(
-            &mut new_armature,
-            animation_index,
+        frame = get_frame_by_time(
+            &mut new_armature.animations[animation_index],
             time.unwrap(),
-            should_loop,
             options.as_ref().unwrap().speed,
-            invert_y!(),
-            options.as_ref().unwrap().last_anim_idx,
-            options.as_ref().unwrap().last_anim_frame,
         );
-    } else {
+    } else if options.as_ref().unwrap().frame != None {
         frame = options.as_ref().unwrap().frame.unwrap();
-        props = rusty_skelform::animate(
-            &mut new_armature,
-            animation_index,
-            &armature.animations[animation_index],
-            options.as_ref().unwrap().frame.unwrap(),
-            should_loop,
-            invert_y!(),
-            options.as_ref().unwrap().last_anim_idx,
-            options.as_ref().unwrap().last_anim_frame,
-        );
     }
+
+    props = rusty_skelform::animate(
+        &mut new_armature,
+        animation_index,
+        frame,
+        should_loop,
+        invert_y!(),
+        options.as_ref().unwrap().last_anim_idx,
+        options.as_ref().unwrap().last_anim_frame,
+    );
 
     armature.metadata = new_armature.metadata;
 
