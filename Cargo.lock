@@ -687,7 +687,9 @@ checksum = "74765f6d916ee2faa39bc8e68e4f3ed8949b48cccdac59983d287a7cb71ce9c5"
 
 [[package]]
 name = "rusty_skelform"
-version = "0.1.1"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df405a1c6cca989a567b82f3f70185273a2240c438f291bc7d518d1a759d2d4c"
 dependencies = [
  "serde",
  "tween",
@@ -695,7 +697,7 @@ dependencies = [
 
 [[package]]
 name = "rusty_skelform_macroquad"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "macroquad",
  "quad-gl",
