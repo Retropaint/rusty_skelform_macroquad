@@ -30,7 +30,7 @@ use quad_gl::{DrawMode, Vertex};
 
 /// Load a SkelForm armature.
 /// The file to load is the zip that is provided by SkelForm export.
-pub fn load_skelform_armature(zip_path: &str, armature_idx: usize) -> (Armature, Texture2D) {
+pub fn load_skelform_armature(zip_path: &str) -> (Armature, Texture2D) {
     // return an empty armature and texture if file doesn't exist
     if !std::fs::exists(zip_path).unwrap() {
         return (Armature::default(), Texture2D::empty());
@@ -55,7 +55,7 @@ pub fn load_skelform_armature(zip_path: &str, armature_idx: usize) -> (Armature,
         tex = Texture2D::from_file_with_format(&img, Some(ImageFormat::Png));
     }
 
-    (root.armatures[armature_idx].clone(), tex)
+    (root.armature.clone(), tex)
 }
 
 /// Load a SkelForm armature, but pointing to armature and texture data separately.
@@ -76,7 +76,7 @@ pub fn load_skelform_scattered(
             Texture2D::from_file_with_format(std::fs::read(texture_path).unwrap().as_slice(), None);
     }
 
-    (root.armatures[armature_idx].clone(), tex)
+    (root.armature.clone(), tex)
 }
 
 #[derive(PartialEq)]
