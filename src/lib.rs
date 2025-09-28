@@ -24,9 +24,7 @@
 
 use macroquad::prelude::*;
 use rusty_skelform::*;
-use std::{io::Read, time::Instant};
-
-use quad_gl::{DrawMode, Vertex};
+use std::{collections::HashMap, io::Read, time::Instant};
 
 /// Load a SkelForm armature.
 /// The file to load is the zip that is provided by SkelForm export.
@@ -39,7 +37,7 @@ pub fn load_skelform_armature(zip_path: &str) -> (Armature, Texture2D) {
     let file = std::fs::File::open(zip_path).unwrap();
     let mut zip = zip::ZipArchive::new(file).unwrap();
     let mut armature_json = String::new();
-    zip.by_index(0)
+    zip.by_name("armature.json")
         .unwrap()
         .read_to_string(&mut armature_json)
         .unwrap();
@@ -51,7 +49,10 @@ pub fn load_skelform_armature(zip_path: &str) -> (Armature, Texture2D) {
     // import texture (if it makes sense to)
     if root.texture_size.x != 0. && root.texture_size.y != 0. {
         let mut img = vec![];
-        zip.by_index(1).unwrap().read_to_end(&mut img).unwrap();
+        zip.by_name("textures.png")
+            .unwrap()
+            .read_to_end(&mut img)
+            .unwrap();
         tex = Texture2D::from_file_with_format(&img, Some(ImageFormat::Png));
     }
 
@@ -138,23 +139,13 @@ pub fn animate(
         options.as_mut().unwrap().frame = Some(0);
     }
 
-    // wrap last anim frame back to last frame if it's -1
-    if options.as_ref().unwrap().last_anim_frame == -1 {
-        options.as_mut().unwrap().last_anim_frame = armature.animations
-            [options.as_ref().unwrap().last_anim_idx]
-            .keyframes
-            .last()
-            .unwrap()
-            .frame
-    }
-
     let mut new_armature = armature.clone();
 
     // fix Macroquad-specific quirks
     {
-        // invert y pos
         for bone in &mut new_armature.bones {
             bone.pos.y = -bone.pos.y;
+            bone.rot = -bone.rot;
         }
 
         // reverse rotations
@@ -167,38 +158,24 @@ pub fn animate(
         }
     }
 
-    macro_rules! invert_y {
-        () => {
-            |og_prop, prop| {
-                let diff = prop.pos.y - og_prop.pos.y;
-                prop.pos.y -= diff * 2.;
-            }
-        };
-    }
-
-    let mut props: Vec<Bone>;
+    let mut props = new_armature.bones.clone();
     let mut frame = 0;
-    if options.as_ref().unwrap().frame == None {
-        frame = get_frame_by_time(
-            &mut new_armature.animations[animation_index],
-            time.unwrap(),
-            options.as_ref().unwrap().speed,
-        );
-    } else if options.as_ref().unwrap().frame != None {
-        frame = options.as_ref().unwrap().frame.unwrap();
+
+    if armature.animations.len() != 0 && animation_index < armature.animations.len() - 1 {
+        let anim = &mut new_armature.animations[animation_index];
+        if options.as_ref().unwrap().frame == None {
+            frame = get_frame_by_time(anim, time.unwrap(), options.as_ref().unwrap().speed);
+        } else if options.as_ref().unwrap().frame != None {
+            frame = options.as_ref().unwrap().frame.unwrap();
+        }
+
+        props = rusty_skelform::animate(&mut new_armature, animation_index, frame, should_loop);
     }
 
-    props = rusty_skelform::animate(
-        &mut new_armature,
-        animation_index,
-        frame,
-        should_loop,
-        invert_y!(),
-        options.as_ref().unwrap().last_anim_idx,
-        options.as_ref().unwrap().last_anim_frame,
-    );
-
-    armature.metadata = new_armature.metadata;
+    let mut og_props = props.clone();
+    rusty_skelform::inheritance(&mut og_props, HashMap::new());
+    let ik_rots = rusty_skelform::inverse_kinematics(&og_props, &armature.ik_families);
+    rusty_skelform::inheritance(&mut props, ik_rots);
 
     for prop in &mut props {
         prop.scale *= options.as_ref().unwrap().scale_factor;
@@ -207,11 +184,8 @@ pub fn animate(
         prop.pos.y += options.as_ref().unwrap().pos_offset.y;
     }
 
-    // sort props by z-index for rendering
-    props.sort_by(|a, b| a.zindex.total_cmp(&b.zindex));
-
     if should_render {
-        draw_props(&mut props, &armature, texture);
+        draw_props(&mut props, &new_armature, texture);
     }
 
     (props, frame)
@@ -221,10 +195,11 @@ pub fn animate(
 pub fn draw_props(props: &mut Vec<Bone>, armature: &Armature, tex: &Texture2D) {
     let col = Color::from_rgba(255, 255, 255, 255);
     for p in 0..props.len() {
-        let mut prop_tex = &Texture::default();
-        if props[p].tex_idx != -1 {
-            prop_tex = &armature.textures[props[p].tex_idx as usize];
+        if props[p].style_idxs.len() == 0 {
+            continue;
         }
+
+        let prop_tex = &armature.styles[0].textures[props[p].tex_idx as usize];
 
         // render bone as mesh
         if props[p].vertices.len() > 0 {
