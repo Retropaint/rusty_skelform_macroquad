@@ -176,7 +176,8 @@ pub fn animate(
     rusty_skelform::inheritance(&mut og_props, HashMap::new());
     let mut ik_rots = HashMap::new();
     for _ in 0..10 {
-        ik_rots = rusty_skelform::inverse_kinematics(&mut og_props, &new_armature.ik_families);
+        ik_rots =
+            rusty_skelform::inverse_kinematics(&mut og_props, &new_armature.ik_families, true);
     }
     rusty_skelform::inheritance(&mut props, ik_rots);
 
