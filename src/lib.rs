@@ -85,7 +85,7 @@ pub struct AnimOptions {
     /// Animation playback speed (default 1).
     pub speed: f32,
 
-    /// Offset (additively) all props' position by this amount.
+    /// Offset (additively) all bones' position by this amount.
     pub pos_offset: macroquad::prelude::Vec2,
 
     pub scale_factor: f32,
@@ -109,7 +109,7 @@ impl Default for AnimOptions {
     }
 }
 
-/// Run an animation and return the props to be (optionally) used.
+/// Run an animation and return the bones to be (optionally) used.
 ///
 /// `should_render` - Render the animation immediately with the most sensible stock settings (affected by AnimOptions).
 /// `should_loop` - Simulate looping. If the animation is 10 frames and the supplied frame is 11, the resulting frame is 1.
@@ -120,7 +120,7 @@ impl Default for AnimOptions {
 /// `last_anim_idx` - Index of the last animation that was played. Used for blending.
 /// `last_anim_frame` - The frame of the last animation to blend from. Set to -1 for last frame.
 ///
-/// Note: edits to the armature (head following cursor, etc) should be made *before* calling `animate()`, unless processing the props manually.
+/// Note: edits to the armature (head following cursor, etc) should be made *before* calling `animate()`, unless processing the bones manually.
 pub fn animate(
     armature: &mut Armature,
     texture: &Texture2D,
@@ -158,7 +158,7 @@ pub fn animate(
         }
     }
 
-    let mut props = new_armature.bones.clone();
+    let mut bones = new_armature.bones.clone();
     let mut frame = 0;
 
     if armature.animations.len() != 0 && animation_index < armature.animations.len() - 1 {
@@ -169,68 +169,68 @@ pub fn animate(
             frame = options.as_ref().unwrap().frame.unwrap();
         }
 
-        props = rusty_skelform::animate(&mut new_armature, animation_index, frame, should_loop);
+        bones = rusty_skelform::animate(&mut new_armature, animation_index, frame, should_loop);
     }
 
-    let mut og_props = props.clone();
-    rusty_skelform::inheritance(&mut og_props, HashMap::new());
+    let mut og_bones = bones.clone();
+    rusty_skelform::inheritance(&mut og_bones, HashMap::new());
     let mut ik_rots = HashMap::new();
     for _ in 0..10 {
         ik_rots =
-            rusty_skelform::inverse_kinematics(&mut og_props, &new_armature.ik_families, true);
+            rusty_skelform::inverse_kinematics(&mut og_bones, &new_armature.ik_families, true);
     }
-    rusty_skelform::inheritance(&mut props, ik_rots);
+    rusty_skelform::inheritance(&mut bones, ik_rots);
 
-    for prop in &mut props {
-        prop.scale *= options.as_ref().unwrap().scale_factor;
-        prop.pos *= options.as_ref().unwrap().scale_factor;
-        prop.pos.x += options.as_ref().unwrap().pos_offset.x;
-        prop.pos.y += options.as_ref().unwrap().pos_offset.y;
+    for bone in &mut bones {
+        bone.scale *= options.as_ref().unwrap().scale_factor;
+        bone.pos *= options.as_ref().unwrap().scale_factor;
+        bone.pos.x += options.as_ref().unwrap().pos_offset.x;
+        bone.pos.y += options.as_ref().unwrap().pos_offset.y;
     }
 
     if should_render {
-        draw_props(&mut props, &new_armature, texture);
+        draw_bones(&mut bones, &new_armature, texture);
     }
 
-    (props, frame)
+    (bones, frame)
 }
 
-/// Draw the provided props with Macroquad.
-pub fn draw_props(props: &mut Vec<Bone>, armature: &Armature, tex: &Texture2D) {
+/// Draw the provided bones with Macroquad.
+pub fn draw_bones(bones: &mut Vec<Bone>, armature: &Armature, tex: &Texture2D) {
     let col = Color::from_rgba(255, 255, 255, 255);
-    for p in 0..props.len() {
-        if props[p].style_idxs.len() == 0 {
+    for b in 0..bones.len() {
+        if bones[b].style_idxs.len() == 0 {
             continue;
         }
 
-        let prop_tex = &armature.styles[0].textures[props[p].tex_idx as usize];
+        let bone_tex = &armature.styles[0].textures[bones[b].tex_idx as usize];
 
         // render bone as mesh
-        if props[p].vertices.len() > 0 {
-            draw_mesh(&create_mesh(&props[p], prop_tex, tex));
+        if bones[b].vertices.len() > 0 {
+            draw_mesh(&create_mesh(&bones[b], bone_tex, tex));
             continue;
         }
 
-        let push_center = prop_tex.size / 2. * props[p].scale;
+        let push_center = bone_tex.size / 2. * bones[b].scale;
 
         // render bone as regular rect
         draw_texture_ex(
             &tex,
-            props[p].pos.x - push_center.x,
-            props[p].pos.y - push_center.y,
+            bones[b].pos.x - push_center.x,
+            bones[b].pos.y - push_center.y,
             col,
             DrawTextureParams {
                 source: Some(Rect {
-                    x: prop_tex.offset.x,
-                    y: prop_tex.offset.y,
-                    w: prop_tex.size.x,
-                    h: prop_tex.size.y,
+                    x: bone_tex.offset.x,
+                    y: bone_tex.offset.y,
+                    w: bone_tex.size.x,
+                    h: bone_tex.size.y,
                 }),
                 dest_size: Some(macroquad::prelude::Vec2::new(
-                    prop_tex.size.x * props[p].scale.x,
-                    prop_tex.size.y * props[p].scale.y,
+                    bone_tex.size.x * bones[b].scale.x,
+                    bone_tex.size.y * bones[b].scale.y,
                 )),
-                rotation: props[p].rot,
+                rotation: bones[b].rot,
                 ..Default::default()
             },
         );
