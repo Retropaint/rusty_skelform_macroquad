@@ -151,7 +151,7 @@ pub fn animate(
         // reverse rotations
         for anim in &mut new_armature.animations {
             for kf in &mut anim.keyframes {
-                if kf.element == AnimElement::Rotation {
+                if kf.element == AnimElement::PositionY {
                     kf.value = -kf.value;
                 }
             }
