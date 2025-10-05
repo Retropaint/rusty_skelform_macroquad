@@ -161,7 +161,7 @@ pub fn animate(
     let mut bones = new_armature.bones.clone();
     let mut frame = 0;
 
-    if armature.animations.len() != 0 && animation_index < armature.animations.len() - 1 {
+    if armature.animations.len() != 0 && animation_index < armature.animations.len() {
         let anim = &mut new_armature.animations[animation_index];
         if options.as_ref().unwrap().frame == None {
             frame = get_frame_by_time(anim, time.unwrap(), options.as_ref().unwrap().speed);
