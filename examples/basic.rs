@@ -29,7 +29,7 @@ async fn main() {
             true,
             Some(AnimOptions {
                 speed: 1.,
-                scale_factor: 0.25,
+                scale_factor: Vec2::new(-0.25, 0.25),
                 pos_offset: Vec2::new(screen_width() / 2., screen_height() / 2.),
                 //frame: Some(0),
                 ..Default::default()

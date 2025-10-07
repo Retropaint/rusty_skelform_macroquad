@@ -88,7 +88,7 @@ pub struct AnimOptions {
     /// Offset (additively) all bones' position by this amount.
     pub pos_offset: macroquad::prelude::Vec2,
 
-    pub scale_factor: f32,
+    pub scale_factor: macroquad::prelude::Vec2,
 
     pub frame: Option<i32>,
 
@@ -101,7 +101,7 @@ impl Default for AnimOptions {
         AnimOptions {
             speed: 1.,
             pos_offset: macroquad::prelude::Vec2::new(0., 0.),
-            scale_factor: 0.25,
+            scale_factor: macroquad::prelude::Vec2::new(0.25, 0.25),
             frame: None,
             last_anim_idx: usize::MAX,
             last_anim_frame: 0,
@@ -181,11 +181,18 @@ pub fn animate(
     }
     rusty_skelform::inheritance(&mut bones, ik_rots);
 
+    let sf = options.as_ref().unwrap().scale_factor;
+    let po = options.as_ref().unwrap().pos_offset;
+
     for bone in &mut bones {
-        bone.scale *= options.as_ref().unwrap().scale_factor;
-        bone.pos *= options.as_ref().unwrap().scale_factor;
-        bone.pos.x += options.as_ref().unwrap().pos_offset.x;
-        bone.pos.y += options.as_ref().unwrap().pos_offset.y;
+        bone.scale *= rusty_skelform::Vec2::new(sf.x, sf.y);
+        bone.pos *= rusty_skelform::Vec2::new(sf.x, sf.y);
+        bone.pos += rusty_skelform::Vec2::new(po.x, po.y);
+
+        // reverse rot if either x or y scale is negative, but not both (XOR)
+        if !(sf.x < 0. && sf.y < 0.) && (sf.x < 0. || sf.y < 0.) {
+            bone.rot = -bone.rot
+        }
     }
 
     if should_render {
