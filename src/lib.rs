@@ -82,11 +82,9 @@ pub struct AnimOptions {
     pub speed: f32,
 
     /// Offset (additively) all bones' position by this amount.
-    pub pos_offset: macroquad::prelude::Vec2,
+    pub position: macroquad::prelude::Vec2,
 
-    pub scale_factor: macroquad::prelude::Vec2,
-
-    pub frame: Option<i32>,
+    pub scale: macroquad::prelude::Vec2,
 
     pub blend_frames: i32,
 }
@@ -95,15 +93,14 @@ impl Default for AnimOptions {
     fn default() -> Self {
         AnimOptions {
             speed: 1.,
-            pos_offset: macroquad::prelude::Vec2::new(0., 0.),
-            scale_factor: macroquad::prelude::Vec2::new(0.25, 0.25),
-            frame: None,
+            position: macroquad::prelude::Vec2::new(0., 0.),
+            scale: macroquad::prelude::Vec2::new(0.25, 0.25),
             blend_frames: 0,
         }
     }
 }
 
-/// Run an animation and return the bones to be (optionally) used.
+/// Process bones to be used for animation(s).
 ///
 /// `should_render` - Render the animation immediately with the most sensible stock settings (affected by AnimOptions).
 /// `should_loop` - Simulate looping. If the animation is 10 frames and the supplied frame is 11, the resulting frame is 1.
@@ -117,86 +114,46 @@ impl Default for AnimOptions {
 /// Note: edits to the armature (head following cursor, etc) should be made *before* calling `animate()`, unless processing the bones manually.
 pub fn animate(
     armature: &mut Armature,
-    texture: &Texture2D,
     animation_index: usize,
-    time: Option<Instant>,
-    should_loop: bool,
-    should_render: bool,
-    mut options: Option<AnimOptions>,
-) -> (Vec<Bone>, i32) {
-    if options == None {
-        options = Some(AnimOptions::default());
-    }
+    frame: i32,
+    options: AnimOptions,
+) -> Vec<Bone> {
+    rusty_skelform::animate(
+        &mut armature.bones,
+        &armature.animations[animation_index],
+        frame,
+    );
 
-    // default to first frame, if neither it nor time were provided
-    if time == None && options.as_ref().unwrap().frame == None {
-        options.as_mut().unwrap().frame = Some(0);
-    }
-
-    let mut new_armature = armature.clone();
-
-    // fix Macroquad-specific quirks
-    {
-        for bone in &mut new_armature.bones {
-            bone.pos.y = -bone.pos.y;
-            bone.rot = -bone.rot;
-        }
-
-        for anim in &mut new_armature.animations {
-            for kf in &mut anim.keyframes {
-                if kf.element == AnimElement::PositionY {
-                    kf.value = -kf.value;
-                }
-            }
-        }
-    }
-
-    let mut bones = new_armature.bones.clone();
-    let mut frame = 0;
-
-    if armature.animations.len() != 0 && animation_index < armature.animations.len() {
-        let anim = &mut new_armature.animations[animation_index];
-        if options.as_ref().unwrap().frame == None {
-            frame = get_frame_by_time(anim, time.unwrap(), options.as_ref().unwrap().speed);
-        } else if options.as_ref().unwrap().frame != None {
-            frame = options.as_ref().unwrap().frame.unwrap();
-        }
-
-        bones = rusty_skelform::animate(&mut new_armature, animation_index, frame, should_loop);
-    }
+    let mut bones = armature.bones.clone();
 
     let mut og_bones = bones.clone();
     rusty_skelform::inheritance(&mut og_bones, HashMap::new());
     let mut ik_rots = HashMap::new();
     for _ in 0..10 {
-        ik_rots =
-            rusty_skelform::inverse_kinematics(&mut og_bones, &new_armature.ik_families, true);
+        ik_rots = rusty_skelform::inverse_kinematics(&mut og_bones, &armature.ik_families, false);
     }
     rusty_skelform::inheritance(&mut bones, ik_rots);
 
-    let sf = options.as_ref().unwrap().scale_factor;
-    let po = options.as_ref().unwrap().pos_offset;
-
     for bone in &mut bones {
-        bone.scale *= rusty_skelform::Vec2::new(sf.x, sf.y);
-        bone.pos *= rusty_skelform::Vec2::new(sf.x, sf.y);
-        bone.pos += rusty_skelform::Vec2::new(po.x, po.y);
+        bone.pos.y = -bone.pos.y;
+        bone.rot = -bone.rot;
+        bone.scale *= rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
+        bone.pos *= rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
+        bone.pos += rusty_skelform::Vec2::new(options.position.x, options.position.y);
 
         // reverse rot if either x or y scale is negative, but not both (XOR)
-        if !(sf.x < 0. && sf.y < 0.) && (sf.x < 0. || sf.y < 0.) {
+        let either = options.scale.x < 0. && options.scale.y < 0.;
+        let both = options.scale.x < 0. || options.scale.y < 0.;
+        if either && !both {
             bone.rot = -bone.rot
         }
     }
 
-    if should_render {
-        draw(&mut bones, texture, &armature.styles);
-    }
-
-    (bones, frame)
+    bones
 }
 
 /// Draw the provided bones with Macroquad.
-pub fn draw(bones: &Vec<Bone>, tex: &Texture2D, styles: &Vec<Style>) {
+pub fn draw(bones: &Vec<Bone>, tex: &Texture2D, styles: &Vec<&Style>) {
     let mut cbones = bones.clone();
     // bones with higher zindex should render first
     cbones.sort_by(|a, b| a.zindex.total_cmp(&b.zindex));
