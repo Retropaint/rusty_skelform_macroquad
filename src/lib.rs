@@ -61,11 +61,7 @@ pub fn load_skelform_armature(zip_path: &str) -> (Armature, Texture2D) {
 
 /// Load a SkelForm armature, but pointing to armature and texture data separately.
 /// Only used for debugging. The proper way to load armatures is via `load_skelform_armature`.
-pub fn load_skelform_scattered(
-    armature_path: &str,
-    texture_path: &str,
-    armature_idx: usize,
-) -> (Armature, Texture2D) {
+pub fn load_skelform_scattered(armature_path: &str, texture_path: &str) -> (Armature, Texture2D) {
     let file = std::fs::File::open(armature_path).unwrap();
     let root: SkelformRoot = serde_json::from_reader(&file).unwrap();
 
@@ -92,8 +88,7 @@ pub struct AnimOptions {
 
     pub frame: Option<i32>,
 
-    pub last_anim_idx: usize,
-    pub last_anim_frame: i32,
+    pub blend_frames: i32,
 }
 
 impl Default for AnimOptions {
@@ -103,8 +98,7 @@ impl Default for AnimOptions {
             pos_offset: macroquad::prelude::Vec2::new(0., 0.),
             scale_factor: macroquad::prelude::Vec2::new(0.25, 0.25),
             frame: None,
-            last_anim_idx: usize::MAX,
-            last_anim_frame: 0,
+            blend_frames: 0,
         }
     }
 }
@@ -148,7 +142,6 @@ pub fn animate(
             bone.rot = -bone.rot;
         }
 
-        // reverse rotations
         for anim in &mut new_armature.animations {
             for kf in &mut anim.keyframes {
                 if kf.element == AnimElement::PositionY {
@@ -196,35 +189,39 @@ pub fn animate(
     }
 
     if should_render {
-        draw_bones(&mut bones, &new_armature, texture);
+        draw(&mut bones, texture, &armature.styles);
     }
 
     (bones, frame)
 }
 
 /// Draw the provided bones with Macroquad.
-pub fn draw_bones(bones: &mut Vec<Bone>, armature: &Armature, tex: &Texture2D) {
+pub fn draw(bones: &Vec<Bone>, tex: &Texture2D, styles: &Vec<Style>) {
+    let mut cbones = bones.clone();
+    // bones with higher zindex should render first
+    cbones.sort_by(|a, b| a.zindex.total_cmp(&b.zindex));
+
     let col = Color::from_rgba(255, 255, 255, 255);
-    for b in 0..bones.len() {
-        if bones[b].style_idxs.len() == 0 {
+    for b in 0..cbones.len() {
+        if cbones[b].style_ids.len() == 0 {
             continue;
         }
 
-        let bone_tex = &armature.styles[0].textures[bones[b].tex_idx as usize];
+        let bone_tex = &styles[0].textures[cbones[b].tex_idx as usize];
 
         // render bone as mesh
-        if bones[b].vertices.len() > 0 {
-            draw_mesh(&create_mesh(&bones[b], bone_tex, tex));
+        if cbones[b].vertices.len() > 0 {
+            draw_mesh(&create_mesh(&cbones[b], bone_tex, tex));
             continue;
         }
 
-        let push_center = bone_tex.size / 2. * bones[b].scale;
+        let push_center = bone_tex.size / 2. * cbones[b].scale;
 
         // render bone as regular rect
         draw_texture_ex(
             &tex,
-            bones[b].pos.x - push_center.x,
-            bones[b].pos.y - push_center.y,
+            cbones[b].pos.x - push_center.x,
+            cbones[b].pos.y - push_center.y,
             col,
             DrawTextureParams {
                 source: Some(Rect {
@@ -234,10 +231,10 @@ pub fn draw_bones(bones: &mut Vec<Bone>, armature: &Armature, tex: &Texture2D) {
                     h: bone_tex.size.y,
                 }),
                 dest_size: Some(macroquad::prelude::Vec2::new(
-                    bone_tex.size.x * bones[b].scale.x,
-                    bone_tex.size.y * bones[b].scale.y,
+                    bone_tex.size.x * cbones[b].scale.x,
+                    bone_tex.size.y * cbones[b].scale.y,
                 )),
-                rotation: bones[b].rot,
+                rotation: cbones[b].rot,
                 ..Default::default()
             },
         );
