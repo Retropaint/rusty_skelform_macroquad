@@ -128,7 +128,7 @@ pub fn animate(
     rusty_skelform::inheritance(&mut inherited_bones, HashMap::new());
     let mut ik_rots = HashMap::new();
     for _ in 0..10 {
-        ik_rots = rusty_skelform::inverse_kinematics(&mut inherited_bones, ik_families, false);
+        ik_rots = rusty_skelform::inverse_kinematics(&mut inherited_bones, ik_families);
     }
 
     let mut final_bones = bones.clone();
