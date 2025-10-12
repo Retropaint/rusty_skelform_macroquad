@@ -113,28 +113,27 @@ impl Default for AnimOptions {
 ///
 /// Note: edits to the armature (head following cursor, etc) should be made *before* calling `animate()`, unless processing the bones manually.
 pub fn animate(
-    armature: &mut Armature,
-    animation_index: usize,
-    frame: i32,
+    bones: &mut Vec<Bone>,
+    ik_families: &Vec<IkFamily>,
+    animations: &Vec<&Animation>,
+    frames: &Vec<i32>,
     options: AnimOptions,
 ) -> Vec<Bone> {
-    rusty_skelform::animate(
-        &mut armature.bones,
-        &armature.animations[animation_index],
-        frame,
-    );
+    for a in 0..animations.len() {
+        rusty_skelform::animate(bones, animations[a], frames[a]);
+    }
 
-    let mut bones = armature.bones.clone();
-
-    let mut og_bones = bones.clone();
-    rusty_skelform::inheritance(&mut og_bones, HashMap::new());
+    let mut inherited_bones = bones.clone();
+    rusty_skelform::inheritance(&mut inherited_bones, HashMap::new());
     let mut ik_rots = HashMap::new();
     for _ in 0..10 {
-        ik_rots = rusty_skelform::inverse_kinematics(&mut og_bones, &armature.ik_families, false);
+        ik_rots = rusty_skelform::inverse_kinematics(&mut inherited_bones, ik_families, false);
     }
-    rusty_skelform::inheritance(&mut bones, ik_rots);
 
-    for bone in &mut bones {
+    let mut final_bones = bones.clone();
+    rusty_skelform::inheritance(&mut final_bones, ik_rots);
+
+    for bone in &mut final_bones {
         bone.pos.y = -bone.pos.y;
         bone.rot = -bone.rot;
         bone.scale *= rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
@@ -142,14 +141,14 @@ pub fn animate(
         bone.pos += rusty_skelform::Vec2::new(options.position.x, options.position.y);
 
         // reverse rot if either x or y scale is negative, but not both (XOR)
-        let either = options.scale.x < 0. && options.scale.y < 0.;
-        let both = options.scale.x < 0. || options.scale.y < 0.;
+        let both = options.scale.x < 0. && options.scale.y < 0.;
+        let either = options.scale.x < 0. || options.scale.y < 0.;
         if either && !both {
             bone.rot = -bone.rot
         }
     }
 
-    bones
+    final_bones
 }
 
 /// Draw the provided bones with Macroquad.
