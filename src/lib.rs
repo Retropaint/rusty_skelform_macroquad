@@ -86,7 +86,7 @@ pub struct AnimOptions {
 
     pub scale: macroquad::prelude::Vec2,
 
-    pub blend_frames: i32,
+    pub blend_frames: Vec<i32>,
 }
 
 impl Default for AnimOptions {
@@ -95,7 +95,8 @@ impl Default for AnimOptions {
             speed: 1.,
             position: macroquad::prelude::Vec2::new(0., 0.),
             scale: macroquad::prelude::Vec2::new(0.25, 0.25),
-            blend_frames: 0,
+            // spam blend frames to prevent OoB
+            blend_frames: vec![0, 0, 0, 0, 0],
         }
     }
 }
@@ -120,7 +121,7 @@ pub fn animate(
     options: AnimOptions,
 ) -> Vec<Bone> {
     for a in 0..animations.len() {
-        rusty_skelform::animate(bones, animations[a], frames[a]);
+        rusty_skelform::animate(bones, animations[a], frames[a], options.blend_frames[a]);
     }
 
     let mut inherited_bones = bones.clone();
