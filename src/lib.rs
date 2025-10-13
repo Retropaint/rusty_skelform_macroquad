@@ -199,7 +199,8 @@ pub fn draw(bones: &Vec<Bone>, tex: &Texture2D, styles: &Vec<&Style>) {
 }
 
 /// Create Macroquad meshes from the given bones and texture data.
-pub fn create_mesh(bone: &Bone, bone_tex: &Texture, tex2d: &Texture2D) -> Mesh {
+// unused until mesh deformation is added
+fn create_mesh(bone: &Bone, bone_tex: &Texture, tex2d: &Texture2D) -> Mesh {
     let mut mesh = Mesh {
         vertices: vec![],
         indices: vec![],
