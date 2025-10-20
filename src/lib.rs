@@ -164,11 +164,21 @@ pub fn draw(bones: &Vec<Bone>, tex: &Texture2D, styles: &Vec<&Style>) {
             continue;
         }
 
-        let bone_tex = &styles[0].textures[cbones[b].tex_idx as usize];
+        let mut bone_tex = Texture::default();
+        for style in styles {
+            if cbones[b].style_ids.contains(&style.id) {
+                bone_tex = style.textures[cbones[b].tex_idx as usize].clone();
+                break;
+            }
+        }
+
+        if bone_tex.size == rusty_skelform::Vec2::new(0., 0.) {
+            continue;
+        }
 
         // render bone as mesh
         if cbones[b].vertices.len() > 0 {
-            draw_mesh(&create_mesh(&cbones[b], bone_tex, tex));
+            draw_mesh(&create_mesh(&cbones[b], &bone_tex, tex));
             continue;
         }
 
