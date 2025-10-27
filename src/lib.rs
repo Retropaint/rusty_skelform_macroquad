@@ -28,7 +28,7 @@ use std::{collections::HashMap, io::Read, time::Instant};
 
 /// Load a SkelForm armature.
 /// The file to load is the zip that is provided by SkelForm export.
-pub fn load_skelform_armature(zip_path: &str) -> (Armature, Texture2D) {
+pub fn load(zip_path: &str) -> (Armature, Texture2D) {
     // return an empty armature and texture if file doesn't exist
     if !std::fs::exists(zip_path).unwrap() {
         return (Armature::default(), Texture2D::empty());
@@ -42,12 +42,12 @@ pub fn load_skelform_armature(zip_path: &str) -> (Armature, Texture2D) {
         .read_to_string(&mut armature_json)
         .unwrap();
 
-    let root: SkelformRoot = serde_json::from_str(&armature_json).unwrap();
+    let armature: Armature = serde_json::from_str(&armature_json).unwrap();
 
     let mut tex = Texture2D::empty();
 
     // import texture (if it makes sense to)
-    if root.texture_size.x != 0. && root.texture_size.y != 0. {
+    if armature.texture_size.x != 0. && armature.texture_size.y != 0. {
         let mut img = vec![];
         zip.by_name("textures.png")
             .unwrap()
@@ -56,24 +56,7 @@ pub fn load_skelform_armature(zip_path: &str) -> (Armature, Texture2D) {
         tex = Texture2D::from_file_with_format(&img, Some(ImageFormat::Png));
     }
 
-    (root.armature.clone(), tex)
-}
-
-/// Load a SkelForm armature, but pointing to armature and texture data separately.
-/// Only used for debugging. The proper way to load armatures is via `load_skelform_armature`.
-pub fn load_skelform_scattered(armature_path: &str, texture_path: &str) -> (Armature, Texture2D) {
-    let file = std::fs::File::open(armature_path).unwrap();
-    let root: SkelformRoot = serde_json::from_reader(&file).unwrap();
-
-    let mut tex = Texture2D::empty();
-
-    // import texture (if it makes sense to)
-    if root.texture_size.x != 0. && root.texture_size.y != 0. {
-        tex =
-            Texture2D::from_file_with_format(std::fs::read(texture_path).unwrap().as_slice(), None);
-    }
-
-    (root.armature.clone(), tex)
+    (armature.clone(), tex)
 }
 
 #[derive(PartialEq)]
