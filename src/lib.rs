@@ -72,7 +72,7 @@ impl Default for ConstructOptions {
         ConstructOptions {
             speed: 1.,
             position: macroquad::prelude::Vec2::new(0., 0.),
-            scale: macroquad::prelude::Vec2::new(0.25, 0.25),
+            scale: macroquad::prelude::Vec2::new(1., 1.),
         }
     }
 }
