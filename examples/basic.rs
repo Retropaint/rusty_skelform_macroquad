@@ -1,71 +1,127 @@
-use macroquad::prelude::*;
+use std::time::Instant;
 
-use rusty_skelform::time_frame;
-use rusty_skelform_macroquad::{animate, draw, load_skelform_armature, AnimOptions};
+use macroquad::prelude as mqr;
+use mqr::*;
+use rusty_skelform as skf;
+use rusty_skelform_macroquad::{animate, construct, draw, load, ConstructOptions};
+use skf::time_frame;
 
 pub const ARMATURE_NIL: &str = "Armature not found! Please run this in the 'examples' folder.";
 
 #[macroquad::main("SkelForm - Macroquad Basic Demo")]
 async fn main() {
-    // Load SkelForm armature.
-    let armature_filename = "untitled.skf";
-    let (mut armature, tex) = load_skelform_armature(armature_filename);
+    // load SkelForm armature
+    let armature_filename = "skellington.skf";
+    let (mut armature, texes) = load(armature_filename);
 
-    // Start a timer to use for the animation.
-    let time = std::time::Instant::now();
+    // timer for animations
+    let mut time = Instant::now();
 
     if armature.bones.len() == 0 {
         println!("{}", ARMATURE_NIL.to_string());
     }
 
-    let mut frame = 0;
+    let mut dir = 1.;
+    let mut pos = Vec2::new(0., -100.);
+    let mut vel = Vec2::new(0., 0.);
+    let ground_y = screen_height() / 2. + 100.;
+    let mut last_anim_idx = 0;
+    let mut anim_idx: usize;
+    let mut is_loop = false;
+    let mut grounded = false;
 
     loop {
         clear_background(GRAY);
-        let tf0 = time_frame(time, &armature.animations[0], false, true);
-        //let tf1 = time_frame(time, &armature.animations[1], false, true);
-        let animated_bones = animate(
-            &mut armature.bones,
-            &mut armature.ik_families,
-            &vec![&armature.animations[0]],
-            &vec![tf0],
-            AnimOptions {
-                speed: 1.,
-                scale: Vec2::new(-0.25, 0.25),
-                position: Vec2::new(screen_width() / 2., screen_height() / 2.),
-                blend_frames: vec![30, 30],
-                //frame: Some(0),
-                ..Default::default()
-            },
-        );
-        draw(&animated_bones, &tex, &vec![&armature.styles[0]]);
 
-        let speed = 10.;
-        if is_key_down(KeyCode::Up) {
-            armature.bones[0].pos.y += speed;
-        }
-        if is_key_down(KeyCode::Down) {
-            armature.bones[0].pos.y -= speed;
-        }
-        if is_key_down(KeyCode::Right) {
-            armature.bones[0].pos.x += speed;
-        }
-        if is_key_down(KeyCode::Left) {
-            armature.bones[0].pos.x -= speed;
+        if pos.y < ground_y {
+            vel.y += 0.05;
+        } else {
+            vel.y = 0.;
+            pos.y = ground_y
         }
 
-        if is_key_down(KeyCode::W) {
-            armature.bones[1].pos.y += speed;
-        }
-        if is_key_down(KeyCode::S) {
-            armature.bones[1].pos.y -= speed;
+        pos += vel;
+
+        let speed = 5.;
+        if is_key_down(KeyCode::A) || is_key_down(KeyCode::D) {
+            anim_idx = 1;
+        } else {
+            anim_idx = 0;
         }
         if is_key_down(KeyCode::D) {
-            armature.bones[1].pos.x += speed;
+            pos.x += speed;
+            dir = 1.;
         }
         if is_key_down(KeyCode::A) {
-            armature.bones[1].pos.x -= speed;
+            pos.x -= speed;
+            dir = -1.;
         }
+        if is_key_pressed(KeyCode::Space) && grounded {
+            vel.y = -5.;
+            pos.y = ground_y - 1.;
+        }
+
+        if vel.y < 0. {
+            //anim_idx = 2;
+            is_loop = false;
+            grounded = false;
+        } else if vel.y > 0. {
+            //anim_idx = 3;
+            is_loop = false;
+            grounded = false;
+        } else {
+            grounded = true;
+            is_loop = true;
+        }
+
+        if last_anim_idx != anim_idx {
+            time = Instant::now();
+            last_anim_idx = anim_idx;
+        }
+
+        // process animation(s)
+        let tf0 = time_frame(time, &armature.animations[anim_idx], false, true);
+        let skel_scale = 0.125;
+        let skel_options = ConstructOptions {
+            speed: 1.,
+            scale: mqr::Vec2::new(skel_scale * dir, skel_scale),
+            position: Vec2::new(pos.x, pos.y),
+            ..Default::default()
+        };
+        animate(
+            &mut armature.bones,
+            &vec![&armature.animations[anim_idx]],
+            &vec![tf0],
+            &vec![20],
+        );
+
+        // these will be used later for immutable edits before construction
+        let mut armature_c = armature.clone();
+        let bones = &mut armature_c.bones;
+
+        // move shoulder and head targets to mouse
+        let mouse = skf::Vec2::new(
+            mouse_position().0 / skel_scale * dir,
+            -mouse_position().1 / skel_scale,
+        );
+        bones[0].pos = skf::Vec2::new(-pos.x / skel_scale * dir, pos.y / skel_scale) + mouse;
+        bones[4].pos = skf::Vec2::new(-pos.x / skel_scale * dir, pos.y / skel_scale) + mouse;
+
+        // flip skull and hat if looking the other way
+        if bones[4].pos.x < pos.x {
+            let skull = bones.iter_mut().find(|b| b.name == "Skull").unwrap();
+            skull.scale.y = -skull.scale.y;
+            let hat = bones.iter_mut().find(|b| b.name == "Hat").unwrap();
+            hat.rot = -hat.rot;
+        }
+
+        // construct and draw armature
+        let mut constructed_bones = construct(&armature_c, skel_options);
+        draw(&mut constructed_bones, &texes, &vec![&armature_c.styles[0]]);
+
+        // visualize shoulder and head target
+        let sc = skel_scale;
+        draw_circle(mouse.x * sc * dir, -mouse.y * sc, 5., mqr::RED);
 
         if armature.bones.len() == 0 {
             let white = Color::from_rgba(255, 255, 255, 255);
@@ -73,6 +129,5 @@ async fn main() {
         }
 
         next_frame().await;
-        frame += 1;
     }
 }
