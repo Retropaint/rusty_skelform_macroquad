@@ -27,7 +27,6 @@ async fn main() {
     let ground_y = screen_height() / 2. + 100.;
     let mut last_anim_idx = 0;
     let mut anim_idx: usize;
-    let mut is_loop = false;
     let mut grounded = false;
 
     loop {
@@ -62,16 +61,13 @@ async fn main() {
         }
 
         if vel.y < 0. {
-            //anim_idx = 2;
-            is_loop = false;
+            anim_idx = 2;
             grounded = false;
         } else if vel.y > 0. {
-            //anim_idx = 3;
-            is_loop = false;
+            anim_idx = 3;
             grounded = false;
         } else {
             grounded = true;
-            is_loop = true;
         }
 
         if last_anim_idx != anim_idx {
@@ -108,11 +104,13 @@ async fn main() {
         bones[4].pos = skf::Vec2::new(-pos.x / skel_scale * dir, pos.y / skel_scale) + mouse;
 
         // flip skull and hat if looking the other way
-        if bones[4].pos.x < pos.x {
+        if (dir == 1. && mouse_position().0 < pos.x) || (dir != 1. && mouse_position().0 > pos.x) {
             let skull = bones.iter_mut().find(|b| b.name == "Skull").unwrap();
             skull.scale.y = -skull.scale.y;
             let hat = bones.iter_mut().find(|b| b.name == "Hat").unwrap();
             hat.rot = -hat.rot;
+            let shoulder = bones.iter_mut().find(|b| b.name == "LSIK").unwrap();
+            shoulder.ik_constraint = 1;
         }
 
         // construct and draw armature
