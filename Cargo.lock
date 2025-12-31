@@ -687,17 +687,16 @@ checksum = "74765f6d916ee2faa39bc8e68e4f3ed8949b48cccdac59983d287a7cb71ce9c5"
 
 [[package]]
 name = "rusty_skelform"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df405a1c6cca989a567b82f3f70185273a2240c438f291bc7d518d1a759d2d4c"
+checksum = "04259622e1a54cbf019949d46aac0de07a9b5a2b8cd22092a6b03d401e6da1e3"
 dependencies = [
  "serde",
- "tween",
 ]
 
 [[package]]
 name = "rusty_skelform_macroquad"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "macroquad",
  "quad-gl",
@@ -808,12 +807,6 @@ name = "ttf-parser"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c591d83f69777866b9126b24c6dd9a18351f177e49d625920d19f989fd31cf8"
-
-[[package]]
-name = "tween"
-version = "2.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a78b9f5f5e343293fb968042de184b8c35b842aa99528e4b3343e0779b3a7a7"
 
 [[package]]
 name = "typenum"

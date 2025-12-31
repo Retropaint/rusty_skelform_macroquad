@@ -8,7 +8,7 @@ use skf::time_frame;
 
 pub const ARMATURE_NIL: &str = "Armature not found! Please run this in the 'examples' folder.";
 pub const INSTRUCTIONS: &str =
-    "A - Move Left\nD - Move Right\nSpace - Jump\nSkellington will look at and reach for cursor";
+    "A - Move Left\nD - Move Right\nSpace - Jump\n1, 2 - Change outfit\nSkellington will look at and reach for cursor";
 
 #[macroquad::main("SkelForm - Macroquad Basic Demo")]
 async fn main() {
@@ -32,6 +32,7 @@ async fn main() {
     let mut last_anim_idx = 0;
     let mut anim_idx: usize;
     let mut grounded = false;
+    let mut skel_style = 1;
 
     loop {
         clear_background(GRAY);
@@ -63,6 +64,12 @@ async fn main() {
             vel.y = -5.;
             pos.y = ground_y - 1.;
         }
+        if is_key_pressed(KeyCode::Key1) {
+            skel_style = 1;
+        }
+        if is_key_pressed(KeyCode::Key2) {
+            skel_style = 0;
+        }
 
         if vel.y < 0. {
             anim_idx = 2;
@@ -89,15 +96,18 @@ async fn main() {
             dir,
             &skel_texes,
             skel_scale,
+            skel_style,
         );
 
-        draw_skellina(
-            skela_time,
-            &mut skellina,
-            skel_scale,
-            &skela_texes,
-            ground_y,
-        );
+        if false {
+            draw_skellina(
+                skela_time,
+                &mut skellina,
+                skel_scale,
+                &skela_texes,
+                ground_y,
+            );
+        }
 
         let white = Color::from_rgba(255, 255, 255, 255);
         if skellington.bones.len() == 0 {
@@ -118,6 +128,7 @@ fn draw_skellington(
     dir: f32,
     texes: &Vec<mqr::Texture2D>,
     skel_scale: f32,
+    skel_style: usize,
 ) {
     // process animation(s)
     let tf0 = time_frame(time, &armature.animations[anim_idx], false, true);
@@ -146,6 +157,11 @@ fn draw_skellington(
     bones[0].pos = skf::Vec2::new(-pos.x / skel_scale * dir, pos.y / skel_scale) + mouse;
     bones[4].pos = skf::Vec2::new(-pos.x / skel_scale * dir, pos.y / skel_scale) + mouse;
 
+    if skel_style == 0 {
+        bones.iter_mut().find(|b| b.name == "Hat").unwrap().pos += skf::Vec2::new(20., -60.);
+        bones.iter_mut().find(|b| b.name == "Collar").unwrap().pos += skf::Vec2::new(7., -23.);
+    }
+
     // flip skull and hat if looking the other way
     if (dir == 1. && mouse_position().0 < pos.x) || (dir != 1. && mouse_position().0 > pos.x) {
         let skull = bones.iter_mut().find(|b| b.name == "Skull").unwrap();
@@ -158,7 +174,11 @@ fn draw_skellington(
 
     // construct and draw armature
     let mut constructed_bones = skf_mq::construct(&armature_c, skel_options);
-    skf_mq::draw(&mut constructed_bones, &texes, &vec![&armature_c.styles[0]]);
+    skf_mq::draw(
+        &mut constructed_bones,
+        &texes,
+        &vec![&armature_c.styles[skel_style], &armature_c.styles[1]],
+    );
 }
 
 fn draw_skellina(
