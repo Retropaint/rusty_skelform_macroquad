@@ -24,7 +24,7 @@
 
 use macroquad::prelude::*;
 use rusty_skelform::*;
-use std::{collections::HashMap, io::Read, time::Instant};
+use std::io::Read;
 
 /// Load a SkelForm armature.
 /// The file to load is the zip that is provided by SkelForm export.
