@@ -12,13 +12,13 @@ pub const INSTRUCTIONS: &str =
 
 #[macroquad::main("SkelForm - Macroquad Basic Demo")]
 async fn main() {
+    let armature_filename = "skellington.skf";
     if !std::fs::exists(armature_filename).unwrap() || !std::fs::exists("skellina.skf").unwrap() {
         println!("\n{}\n", ARMATURE_NIL.to_string());
         return;
     }
 
     // load SkelForm armature
-    let armature_filename = "skellington.skf";
     let (mut skellington, skel_texes) = skf_mq::load(armature_filename);
     let (mut skellina, skela_texes) = skf_mq::load("skellina.skf");
 
