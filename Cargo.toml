@@ -1,6 +1,6 @@
 [package]
 name = "rusty_skelform_macroquad"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "SkelForm Macroquad runtime"
 license = "MIT"
