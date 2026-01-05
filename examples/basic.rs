@@ -13,18 +13,16 @@ pub const INSTRUCTIONS: &str =
 #[macroquad::main("SkelForm - Macroquad Basic Demo")]
 async fn main() {
     let armature_filename = "skellington.skf";
-    if !std::fs::exists(armature_filename).unwrap() || !std::fs::exists("skellina.skf").unwrap() {
+    if !std::fs::exists(armature_filename).unwrap() {
         println!("\n{}\n", ARMATURE_NIL.to_string());
         return;
     }
 
     // load SkelForm armature
     let (mut skellington, skel_texes) = skf_mq::load(armature_filename);
-    let (mut skellina, skela_texes) = skf_mq::load("skellina.skf");
 
     // timer for animations
     let mut time = Instant::now();
-    let skela_time = Instant::now();
 
     if skellington.bones.len() == 0 {
         println!("{}", ARMATURE_NIL.to_string());
@@ -104,16 +102,6 @@ async fn main() {
             skel_style,
         );
 
-        if false {
-            draw_skellina(
-                skela_time,
-                &mut skellina,
-                skel_scale,
-                &skela_texes,
-                ground_y,
-            );
-        }
-
         let white = Color::from_rgba(255, 255, 255, 255);
         if skellington.bones.len() == 0 {
             draw_text(ARMATURE_NIL, 10., 25., 25., white);
@@ -184,29 +172,4 @@ fn draw_skellington(
         &texes,
         &vec![&armature_c.styles[skel_style], &armature_c.styles[1]],
     );
-}
-
-fn draw_skellina(
-    time: std::time::Instant,
-    skellina: &mut skf::Armature,
-    scale: f32,
-    texes: &Vec<mqr::Texture2D>,
-    ground_y: f32,
-) {
-    let tf0 = time_frame(time, &skellina.animations[0], false, true);
-    skf_mq::animate(
-        &mut skellina.bones,
-        &vec![&skellina.animations[0]],
-        &vec![tf0],
-        &vec![0],
-    );
-    let mut bones = skf_mq::construct(
-        &skellina,
-        skf_mq::ConstructOptions {
-            scale: mqr::Vec2::new(-scale, scale),
-            position: mqr::Vec2::new(screen_width() - 100., ground_y + 50.),
-            ..Default::default()
-        },
-    );
-    skf_mq::draw(&mut bones, &texes, &vec![&skellina.styles[0]]);
 }
