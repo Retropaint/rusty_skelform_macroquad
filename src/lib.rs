@@ -114,15 +114,14 @@ pub fn draw(bones: &mut Vec<Bone>, texes: &Vec<Texture2D>, styles: &Vec<&Style>)
     // bones with higher zindex should render first
     bones.sort_by(|a, b| a.zindex.total_cmp(&b.zindex));
 
-    let final_textures = setup_bone_textures(bones, styles);
-
     let col = Color::from_rgba(255, 255, 255, 255);
     for bone in bones {
-        if final_textures.get(&bone.id) == None {
+        //let tex = final_textures.get(&bone.id).unwrap();
+        let tex_raw = get_bone_texture(bone.tex.clone(), styles);
+        if tex_raw == None {
             continue;
         }
-
-        let tex = final_textures.get(&bone.id).unwrap();
+        let tex = tex_raw.unwrap();
 
         // render bone as mesh
         if bone.vertices.len() > 0 {
