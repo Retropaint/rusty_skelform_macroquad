@@ -162,14 +162,11 @@ fn draw_skellington(
         let hat = bones.iter_mut().find(|b| b.name == "Hat").unwrap();
         hat.rot = -hat.rot;
         let shoulder = bones.iter_mut().find(|b| b.name == "LSIK").unwrap();
-        shoulder.ik_constraint = 1;
+        shoulder.ik_constraint = "Clockwise".to_string();
     }
 
     // construct and draw armature
     let mut constructed_bones = skf_mq::construct(&armature_c, skel_options);
-    skf_mq::draw(
-        &mut constructed_bones,
-        &texes,
-        &vec![&armature_c.styles[skel_style], &armature_c.styles[1]],
-    );
+    let styles = &vec![&armature_c.styles[skel_style], &armature_c.styles[1]];
+    skf_mq::draw(&mut constructed_bones, &texes, styles);
 }
