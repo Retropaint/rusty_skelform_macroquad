@@ -81,8 +81,8 @@ impl Default for ConstructOptions {
 pub fn animate(
     bones: &mut Vec<Bone>,
     animations: &Vec<&Animation>,
-    frames: &Vec<i32>,
-    smooth_frames: &Vec<i32>,
+    frames: &Vec<u32>,
+    smooth_frames: &Vec<u32>,
 ) {
     rusty_skelform::animate(bones, animations, frames, smooth_frames);
 }
