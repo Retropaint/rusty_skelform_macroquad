@@ -112,7 +112,7 @@ pub fn construct(armature: &Armature, options: ConstructOptions) -> Vec<Bone> {
 /// Draw the provided bones with Macroquad.
 pub fn draw(bones: &mut Vec<Bone>, texes: &Vec<Texture2D>, styles: &Vec<&Style>) {
     // bones with higher zindex should render first
-    bones.sort_by(|a, b| a.zindex.total_cmp(&b.zindex));
+    bones.sort_by(|a, b| a.zindex.partial_cmp(&b.zindex).unwrap());
 
     let col = Color::from_rgba(255, 255, 255, 255);
     for bone in bones {

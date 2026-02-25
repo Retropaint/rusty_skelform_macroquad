@@ -688,8 +688,6 @@ checksum = "74765f6d916ee2faa39bc8e68e4f3ed8949b48cccdac59983d287a7cb71ce9c5"
 [[package]]
 name = "rusty_skelform"
 version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46adcc751dd917230afd73c7590ab61197292d9e8844da44f22c7e5c9290a3c4"
 dependencies = [
  "serde",
 ]
