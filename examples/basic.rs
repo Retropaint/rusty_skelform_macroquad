@@ -139,8 +139,8 @@ fn draw_skellington(
     );
 
     // these will be used later for immutable edits before construction
-    let mut armature_c = armature.clone();
-    let bones = &mut armature_c.bones;
+    let bones = &mut armature.bones;
+    let cached_bones = &mut armature.cached_bones;
 
     // move shoulder and head targets to mouse
     let mouse = skf::Vec2::new(
@@ -154,19 +154,31 @@ fn draw_skellington(
         bones.iter_mut().find(|b| b.name == "Hat").unwrap().pos += skf::Vec2::new(20., -60.);
         bones.iter_mut().find(|b| b.name == "Collar").unwrap().pos += skf::Vec2::new(7., -23.);
     }
+    let skull = bones.iter_mut().find(|b| b.name == "Skull").unwrap();
+    skull.scale.y = 1.;
 
     // flip skull and hat if looking the other way
-    if (dir == 1. && mouse_position().0 < pos.x) || (dir != 1. && mouse_position().0 > pos.x) {
-        let skull = bones.iter_mut().find(|b| b.name == "Skull").unwrap();
+    let looking_back_left = dir == 1. && mouse_position().0 < pos.x;
+    let looking_back_right = dir != 1. && mouse_position().0 > pos.x;
+    if looking_back_left || looking_back_right {
         skull.scale.y = -skull.scale.y;
         let hat = bones.iter_mut().find(|b| b.name == "Hat").unwrap();
-        hat.rot = -hat.rot;
-        let shoulder = bones.iter_mut().find(|b| b.name == "LSIK").unwrap();
-        shoulder.ik_constraint = "Clockwise".to_string();
+        hat.rot = -0.1;
+    }
+
+    // revert left shoulder constraint if looking back
+    if cached_bones.len() != 0 {
+        let shoulder = cached_bones.iter_mut().find(|b| b.name == "LSIK").unwrap();
+        if looking_back_left || looking_back_right {
+            shoulder.ik_constraint = "Clockwise".to_string();
+        } else {
+            shoulder.ik_constraint = "CounterClockwise".to_string();
+        }
     }
 
     // construct and draw armature
-    let mut constructed_bones = skf_mq::construct(&armature_c, skel_options);
-    let styles = &vec![&armature_c.styles[skel_style], &armature_c.styles[1]];
-    skf_mq::draw(&mut constructed_bones, &texes, styles);
+    skf_mq::construct(armature, &skel_options);
+
+    let styles = &vec![&armature.styles[skel_style], &armature.styles[1]];
+    skf_mq::draw(&mut armature.cached_bones, &texes, styles);
 }

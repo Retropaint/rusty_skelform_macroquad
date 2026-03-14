@@ -87,9 +87,9 @@ pub fn animate(
     rusty_skelform::animate(bones, animations, frames, smooth_frames);
 }
 
-pub fn construct(armature: &Armature, options: ConstructOptions) -> Vec<Bone> {
-    let mut final_bones = rusty_skelform::construct(armature);
-    for bone in &mut final_bones {
+pub fn construct(armature: &mut Armature, options: &ConstructOptions) {
+    rusty_skelform::construct(armature);
+    for bone in &mut armature.cached_bones {
         bone.pos.y = -bone.pos.y;
         bone.rot = -bone.rot;
         let options_scale = rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
@@ -105,8 +105,6 @@ pub fn construct(armature: &Armature, options: ConstructOptions) -> Vec<Bone> {
             vert.pos += rusty_skelform::Vec2::new(options.position.x, options.position.y);
         }
     }
-
-    final_bones
 }
 
 /// Draw the provided bones with Macroquad.
