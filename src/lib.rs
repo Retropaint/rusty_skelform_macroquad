@@ -65,6 +65,7 @@ pub struct ConstructOptions {
     pub position: macroquad::prelude::Vec2,
 
     pub scale: macroquad::prelude::Vec2,
+    pub velocity: macroquad::prelude::Vec2,
 }
 
 impl Default for ConstructOptions {
@@ -73,6 +74,7 @@ impl Default for ConstructOptions {
             speed: 1.,
             position: macroquad::prelude::Vec2::new(0., 0.),
             scale: macroquad::prelude::Vec2::new(1., 1.),
+            velocity: macroquad::prelude::Vec2::new(0., 0.),
         }
     }
 }
@@ -89,13 +91,16 @@ pub fn animate(
 
 pub fn construct(armature: &mut Armature, options: &ConstructOptions) {
     rusty_skelform::construct(armature);
-    for bone in &mut armature.cached_bones {
+    for b in 0..armature.cached_bones.len() {
+        let bone = &mut armature.cached_bones[b];
         bone.pos.y = -bone.pos.y;
         bone.rot = -bone.rot;
         let options_scale = rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
         bone.scale *= options_scale;
         bone.pos *= rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
         bone.pos += rusty_skelform::Vec2::new(options.position.x, options.position.y);
+        armature.bones[b].phys_global_pos -=
+            rusty_skelform::Vec2::new(options.velocity.x, options.velocity.y);
 
         rusty_skelform::check_flip(bone, options_scale);
 

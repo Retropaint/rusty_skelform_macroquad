@@ -12,7 +12,7 @@ pub const INSTRUCTIONS: &str =
 
 #[macroquad::main("SkelForm - Macroquad Basic Demo")]
 async fn main() {
-    let armature_filename = "skellington.skf";
+    let armature_filename = "Untitled.skf";
     if !std::fs::exists(armature_filename).unwrap() {
         println!("\n{}\n", ARMATURE_NIL.to_string());
         return;
@@ -30,8 +30,9 @@ async fn main() {
 
     let mut dir = 1.;
     let mut pos = Vec2::new(100., -100.);
+    let mut prev_pos = pos;
     let mut vel = Vec2::new(0., 0.);
-    let ground_y = screen_height() / 2. + 100.;
+    let ground_y = screen_height() / 2. + 200.;
     let mut last_anim_idx = 0;
     let mut anim_idx: usize;
     let mut grounded = false;
@@ -96,6 +97,7 @@ async fn main() {
             &mut skellington,
             anim_idx,
             pos,
+            prev_pos,
             dir,
             &skel_texes,
             skel_scale,
@@ -109,6 +111,8 @@ async fn main() {
             draw_multiline_text(INSTRUCTIONS, 10., 25., 35., None, white);
         }
 
+        prev_pos = pos;
+
         next_frame().await;
     }
 }
@@ -118,67 +122,32 @@ fn draw_skellington(
     armature: &mut skf::Armature,
     anim_idx: usize,
     pos: Vec2,
+    prev_pos: Vec2,
     dir: f32,
     texes: &Vec<mqr::Texture2D>,
     skel_scale: f32,
     skel_style: usize,
 ) {
     // process animation(s)
-    let tf0 = time_frame(time, &armature.animations[anim_idx], false, true);
+    // let tf0 = time_frame(time, &armature.animations[anim_idx], false, true);
+    let velocity = Vec2::new(pos.x - prev_pos.x, -(pos.y - prev_pos.y)) * 10.;
     let skel_options = skf_mq::ConstructOptions {
         speed: 1.,
-        scale: mqr::Vec2::new(skel_scale * dir, skel_scale),
+        scale: mqr::Vec2::new(0.25, 0.25),
         position: Vec2::new(pos.x, pos.y),
+        velocity,
         ..Default::default()
     };
-    skf_mq::animate(
-        &mut armature.bones,
-        &vec![&armature.animations[anim_idx]],
-        &vec![tf0],
-        &vec![20],
-    );
-
-    // these will be used later for immutable edits before construction
-    let bones = &mut armature.bones;
-    let cached_bones = &mut armature.cached_bones;
-
-    // move shoulder and head targets to mouse
-    let mouse = skf::Vec2::new(
-        mouse_position().0 / skel_scale * dir,
-        -mouse_position().1 / skel_scale,
-    );
-    bones[0].pos = skf::Vec2::new(-pos.x / skel_scale * dir, pos.y / skel_scale) + mouse;
-    bones[4].pos = skf::Vec2::new(-pos.x / skel_scale * dir, pos.y / skel_scale) + mouse;
-
-    if skel_style == 0 {
-        bones.iter_mut().find(|b| b.name == "Hat").unwrap().pos += skf::Vec2::new(20., -60.);
-        bones.iter_mut().find(|b| b.name == "Collar").unwrap().pos += skf::Vec2::new(7., -23.);
-    }
-    let skull = bones.iter_mut().find(|b| b.name == "Skull").unwrap();
-    skull.scale.y = 1.;
-
-    // flip skull and hat if looking the other way
-    let looking_back_left = dir == 1. && mouse_position().0 < pos.x;
-    let looking_back_right = dir != 1. && mouse_position().0 > pos.x;
-    if looking_back_left || looking_back_right {
-        skull.scale.y = -skull.scale.y;
-        let hat = bones.iter_mut().find(|b| b.name == "Hat").unwrap();
-        hat.rot = -0.1;
-    }
-
-    // revert left shoulder constraint if looking back
-    if cached_bones.len() != 0 {
-        let shoulder = cached_bones.iter_mut().find(|b| b.name == "LSIK").unwrap();
-        if looking_back_left || looking_back_right {
-            shoulder.ik_constraint = "Clockwise".to_string();
-        } else {
-            shoulder.ik_constraint = "CounterClockwise".to_string();
-        }
-    }
+    // skf_mq::animate(
+    //     &mut armature.bones,
+    //     &vec![&armature.animations[anim_idx]],
+    //     &vec![tf0],
+    //     &vec![20],
+    // );
 
     // construct and draw armature
     skf_mq::construct(armature, &skel_options);
 
-    let styles = &vec![&armature.styles[skel_style], &armature.styles[1]];
+    let styles = &vec![&armature.styles[0]];
     skf_mq::draw(&mut armature.cached_bones, &texes, styles);
 }
