@@ -41,12 +41,12 @@ async fn main() {
     loop {
         clear_background(GRAY);
 
-        if pos.y < ground_y {
-            vel.y += 0.05;
-        } else {
-            vel.y = 0.;
-            pos.y = ground_y
-        }
+        //if pos.y < ground_y {
+        //    vel.y += 0.05;
+        //} else {
+        //    vel.y = 0.;
+        //    pos.y = ground_y
+        //}
 
         pos += vel;
 
@@ -64,9 +64,18 @@ async fn main() {
             pos.x -= speed;
             dir = -1.;
         }
+        if is_key_down(KeyCode::S) {
+            pos.y += speed;
+            dir = 1.;
+        }
+        if is_key_down(KeyCode::W) {
+            pos.y -= speed;
+            dir = -1.;
+        }
+
         if is_key_pressed(KeyCode::Space) && grounded {
-            vel.y = -5.;
-            pos.y = ground_y - 1.;
+            //vel.y = -5.;
+            //pos.y = ground_y - 1.;
         }
         if is_key_pressed(KeyCode::Key1) {
             skel_style = 1;
