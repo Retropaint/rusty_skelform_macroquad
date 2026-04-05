@@ -58,9 +58,6 @@ pub fn load(zip_path: &str) -> (Armature, Vec<Texture2D>) {
 
 #[derive(PartialEq)]
 pub struct ConstructOptions {
-    /// Animation playback speed (default 1).
-    pub speed: f32,
-
     /// Offset (additively) all bones' position by this amount.
     pub position: macroquad::prelude::Vec2,
 
@@ -71,7 +68,6 @@ pub struct ConstructOptions {
 impl Default for ConstructOptions {
     fn default() -> Self {
         ConstructOptions {
-            speed: 1.,
             position: macroquad::prelude::Vec2::new(0., 0.),
             scale: macroquad::prelude::Vec2::new(1., 1.),
             velocity: macroquad::prelude::Vec2::new(0., 0.),
@@ -99,6 +95,8 @@ pub fn construct(armature: &mut Armature, options: &ConstructOptions) {
         bone.scale *= options_scale;
         bone.pos *= rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
         bone.pos += rusty_skelform::Vec2::new(options.position.x, options.position.y);
+
+        // apply velocity, for physics
         armature.bones[b].phys_global_pos -=
             rusty_skelform::Vec2::new(options.velocity.x, options.velocity.y);
 
