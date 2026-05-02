@@ -87,8 +87,8 @@ pub fn animate(
 
 pub fn construct(armature: &mut Armature, options: &ConstructOptions) {
     rusty_skelform::construct(armature);
-    for b in 0..armature.cached_bones.len() {
-        let bone = &mut armature.cached_bones[b];
+    for b in 0..armature.constructed_bones.len() {
+        let bone = &mut armature.constructed_bones[b];
         bone.pos.y = -bone.pos.y;
         bone.rot = -bone.rot;
         let options_scale = rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
