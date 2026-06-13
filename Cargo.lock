@@ -687,14 +687,14 @@ checksum = "74765f6d916ee2faa39bc8e68e4f3ed8949b48cccdac59983d287a7cb71ce9c5"
 
 [[package]]
 name = "rusty_skelform"
-version = "0.4.3"
+version = "0.5.1"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "rusty_skelform_macroquad"
-version = "0.4.2"
+version = "0.5.0"
 dependencies = [
  "macroquad",
  "quad-gl",
