@@ -78,11 +78,12 @@ impl Default for ConstructOptions {
 /// Process bones to be used for animation(s).
 pub fn animate(
     bones: &mut Vec<Bone>,
+    inverse_kinematics: &mut Vec<InverseKinematics>,
     animations: &Vec<&Animation>,
     frames: &Vec<u32>,
     smooth_frames: &Vec<u32>,
 ) {
-    rusty_skelform::animate(bones, animations, frames, smooth_frames);
+    rusty_skelform::animate(bones, inverse_kinematics, animations, frames, smooth_frames);
 }
 
 pub fn construct(armature: &mut Armature, options: &ConstructOptions) {
