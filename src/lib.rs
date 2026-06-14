@@ -79,11 +79,19 @@ impl Default for ConstructOptions {
 pub fn animate(
     bones: &mut Vec<Bone>,
     inverse_kinematics: &mut Vec<InverseKinematics>,
+    visuals: &mut Vec<Visuals>,
     animations: &Vec<&Animation>,
     frames: &Vec<u32>,
     smooth_frames: &Vec<u32>,
 ) {
-    rusty_skelform::animate(bones, inverse_kinematics, animations, frames, smooth_frames);
+    rusty_skelform::animate(
+        bones,
+        inverse_kinematics,
+        visuals,
+        animations,
+        frames,
+        smooth_frames,
+    );
 }
 
 pub fn construct(armature: &mut Armature, options: &ConstructOptions) {
@@ -98,37 +106,68 @@ pub fn construct(armature: &mut Armature, options: &ConstructOptions) {
         bone.pos += rusty_skelform::Vec2::new(options.position.x, options.position.y);
 
         // apply velocity, for physics
-        armature.bones[b].phys_global_pos -=
-            rusty_skelform::Vec2::new(options.velocity.x, options.velocity.y);
+        if let Some(physics) = armature.physics.get_mut(bone.physics_id as usize) {
+            physics.global_pos -= rusty_skelform::Vec2::new(options.velocity.x, options.velocity.y);
+        }
 
         rusty_skelform::check_flip(bone, options_scale);
 
-        for vert in &mut bone.vertices {
-            vert.pos.y = -vert.pos.y;
-            vert.pos *= rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
-            vert.pos += rusty_skelform::Vec2::new(options.position.x, options.position.y);
+        if let Some(visual) = armature.visuals.get_mut(bone.visuals_id as usize) {
+            for vert in &mut visual.vertices {
+                vert.pos.y = -vert.pos.y;
+                vert.pos *= rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
+                vert.pos += rusty_skelform::Vec2::new(options.position.x, options.position.y);
+            }
         }
     }
 }
 
 /// Draw the provided bones with Macroquad.
-pub fn draw(bones: &mut Vec<Bone>, texes: &Vec<Texture2D>, styles: &Vec<&Style>) {
+pub fn draw(
+    bones: &mut Vec<Bone>,
+    visuals: &Vec<Visuals>,
+    texes: &Vec<Texture2D>,
+    styles: &Vec<&Style>,
+) {
     // bones with higher zindex should render first
-    bones.sort_by(|a, b| a.zindex.partial_cmp(&b.zindex).unwrap());
+    bones.sort_by(|a, b| {
+        // get A zindex
+        let a_zindex = if a.visuals_id != -1 {
+            visuals[a.visuals_id as usize].zindex
+        } else {
+            0
+        };
+
+        // get B zindex
+        let b_zindex = if b.visuals_id != -1 {
+            visuals[b.visuals_id as usize].zindex
+        } else {
+            0
+        };
+
+        a_zindex.partial_cmp(&b_zindex).unwrap()
+    });
 
     let col = Color::from_rgba(255, 255, 255, 255);
     for bone in bones {
-        //let tex = final_textures.get(&bone.id).unwrap();
-        let tex_raw = get_bone_texture(bone.tex.clone(), styles);
-        if tex_raw == None {
+        if bone.visuals_id == -1 {
             continue;
         }
-        let tex = tex_raw.unwrap();
+
+        // get this bone's visual data
+        let visual = &visuals[bone.visuals_id as usize];
+
+        // get this bone's texture (based on active styles)
+        let tex = get_bone_texture(visual.tex.clone(), styles);
+        if tex == None {
+            continue;
+        }
+        let tex = tex.unwrap();
 
         // render bone as mesh
-        if bone.vertices.len() > 0 {
+        if visual.vertices.len() > 0 {
             let atlas_idx = tex.atlas_idx as usize;
-            draw_mesh(&create_mesh(&bone, &tex, &texes[atlas_idx]));
+            draw_mesh(&create_mesh(&visual, &tex, &texes[atlas_idx]));
             continue;
         }
 
@@ -160,21 +199,21 @@ pub fn draw(bones: &mut Vec<Bone>, texes: &Vec<Texture2D>, styles: &Vec<&Style>)
 }
 
 /// Create Macroquad meshes from the given bones and texture data.
-fn create_mesh(bone: &Bone, bone_tex: &Texture, tex2d: &Texture2D) -> Mesh {
+fn create_mesh(visual: &Visuals, tex: &Texture, tex2d: &Texture2D) -> Mesh {
     let mut mesh = Mesh {
         vertices: vec![],
         indices: vec![],
         texture: Some(tex2d.clone()),
     };
 
-    mesh.indices = bone.indices.iter().map(|i| *i as u16).collect();
+    mesh.indices = visual.indices.iter().map(|i| *i as u16).collect();
 
-    let lt_tex_x = bone_tex.offset.x / tex2d.size().x;
-    let lt_tex_y = bone_tex.offset.y / tex2d.size().y;
-    let rb_tex_x = (bone_tex.offset.x + bone_tex.size.x) / tex2d.size().x - lt_tex_x;
-    let rb_tex_y = (bone_tex.offset.y + bone_tex.size.y) / tex2d.size().y - lt_tex_y;
+    let lt_tex_x = tex.offset.x / tex2d.size().x;
+    let lt_tex_y = tex.offset.y / tex2d.size().y;
+    let rb_tex_x = (tex.offset.x + tex.size.x) / tex2d.size().x - lt_tex_x;
+    let rb_tex_y = (tex.offset.y + tex.size.y) / tex2d.size().y - lt_tex_y;
 
-    for v in &bone.vertices {
+    for v in &visual.vertices {
         let uv_x = lt_tex_x + (rb_tex_x * v.uv.x);
         let uv_y = lt_tex_y + (rb_tex_y * v.uv.y);
 
