@@ -58,21 +58,19 @@ pub fn load(zip_path: &str) -> (Armature, Vec<Texture2D>) {
 
 #[derive(PartialEq)]
 pub struct ConstructOptions {
-    /// Animation playback speed (default 1).
-    pub speed: f32,
-
     /// Offset (additively) all bones' position by this amount.
     pub position: macroquad::prelude::Vec2,
 
     pub scale: macroquad::prelude::Vec2,
+    pub velocity: macroquad::prelude::Vec2,
 }
 
 impl Default for ConstructOptions {
     fn default() -> Self {
         ConstructOptions {
-            speed: 1.,
             position: macroquad::prelude::Vec2::new(0., 0.),
             scale: macroquad::prelude::Vec2::new(1., 1.),
+            velocity: macroquad::prelude::Vec2::new(0., 0.),
         }
     }
 }
@@ -80,16 +78,26 @@ impl Default for ConstructOptions {
 /// Process bones to be used for animation(s).
 pub fn animate(
     bones: &mut Vec<Bone>,
+    inverse_kinematics: &mut Vec<InverseKinematics>,
+    visuals: &mut Vec<Visuals>,
     animations: &Vec<&Animation>,
     frames: &Vec<u32>,
     smooth_frames: &Vec<u32>,
 ) {
-    rusty_skelform::animate(bones, animations, frames, smooth_frames);
+    rusty_skelform::animate(
+        bones,
+        inverse_kinematics,
+        visuals,
+        animations,
+        frames,
+        smooth_frames,
+    );
 }
 
 pub fn construct(armature: &mut Armature, options: &ConstructOptions) {
     rusty_skelform::construct(armature);
-    for bone in &mut armature.cached_bones {
+    for b in 0..armature.constructed_bones.len() {
+        let bone = &mut armature.constructed_bones[b];
         bone.pos.y = -bone.pos.y;
         bone.rot = -bone.rot;
         let options_scale = rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
@@ -97,36 +105,80 @@ pub fn construct(armature: &mut Armature, options: &ConstructOptions) {
         bone.pos *= rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
         bone.pos += rusty_skelform::Vec2::new(options.position.x, options.position.y);
 
+        // apply velocity, for physics
+        if let Some(physics) = armature.physics.get_mut(bone.physics_id as usize) {
+            physics.global_pos -= rusty_skelform::Vec2::new(options.velocity.x, options.velocity.y);
+        }
+
         rusty_skelform::check_flip(bone, options_scale);
 
-        for vert in &mut bone.vertices {
-            vert.pos.y = -vert.pos.y;
-            vert.pos *= rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
-            vert.pos += rusty_skelform::Vec2::new(options.position.x, options.position.y);
+        if let Some(visual) = armature.visuals.get_mut(bone.visuals_id as usize) {
+            for vert in &mut visual.vertices {
+                vert.pos.y = -vert.pos.y;
+                vert.pos *= rusty_skelform::Vec2::new(options.scale.x, options.scale.y);
+                vert.pos += rusty_skelform::Vec2::new(options.position.x, options.position.y);
+            }
         }
     }
 }
 
 /// Draw the provided bones with Macroquad.
-pub fn draw(bones: &mut Vec<Bone>, texes: &Vec<Texture2D>, styles: &Vec<&Style>) {
+pub fn draw(
+    bones: &mut Vec<Bone>,
+    visuals: &Vec<Visuals>,
+    texes: &Vec<Texture2D>,
+    styles: &Vec<&Style>,
+) {
     // bones with higher zindex should render first
-    bones.sort_by(|a, b| a.zindex.partial_cmp(&b.zindex).unwrap());
+    bones.sort_by(|a, b| {
+        // get A zindex
+        let a_zindex = if a.visuals_id != -1 {
+            visuals[a.visuals_id as usize].zindex
+        } else {
+            0
+        };
+
+        // get B zindex
+        let b_zindex = if b.visuals_id != -1 {
+            visuals[b.visuals_id as usize].zindex
+        } else {
+            0
+        };
+
+        a_zindex.partial_cmp(&b_zindex).unwrap()
+    });
 
     let col = Color::from_rgba(255, 255, 255, 255);
     for bone in bones {
-        //let tex = final_textures.get(&bone.id).unwrap();
-        let tex_raw = get_bone_texture(bone.tex.clone(), styles);
-        if tex_raw == None {
+        if bone.visuals_id == -1 {
             continue;
         }
-        let tex = tex_raw.unwrap();
+
+        // get this bone's visual data
+        let visual = &visuals[bone.visuals_id as usize];
+
+        // get this bone's texture (based on active styles)
+        let tex = get_bone_texture(visual.tex.clone(), styles);
+        if tex == None {
+            continue;
+        }
+        let tex = tex.unwrap();
+
+        // move bone based on pivot
+        let mut pivot_pos = visual.pivot_pos * tex.size;
+        pivot_pos = rusty_skelform::rotate_vec2(&pivot_pos, -bone.rot) * bone.scale;
+        // invert Y, since Macroquad is -Y
+        pivot_pos.y = -pivot_pos.y;
 
         // render bone as mesh
-        if bone.vertices.len() > 0 {
+        if visual.vertices.len() > 0 {
             let atlas_idx = tex.atlas_idx as usize;
-            draw_mesh(&create_mesh(&bone, &tex, &texes[atlas_idx]));
+            draw_mesh(&create_mesh(&visual, &tex, &pivot_pos, &texes[atlas_idx]));
             continue;
         }
+
+        // add bone position to pivot, so it can be used as the source of truth for tex pos
+        pivot_pos += bone.pos;
 
         // Macroquad's sprite origin is top-left, so this will align them to center origin
         let push_center = tex.size / 2. * bone.scale;
@@ -134,8 +186,8 @@ pub fn draw(bones: &mut Vec<Bone>, texes: &Vec<Texture2D>, styles: &Vec<&Style>)
         // render bone as regular rect
         draw_texture_ex(
             &texes[tex.atlas_idx as usize],
-            bone.pos.x - push_center.x,
-            bone.pos.y - push_center.y,
+            pivot_pos.x - push_center.x,
+            pivot_pos.y - push_center.y,
             col,
             DrawTextureParams {
                 source: Some(Rect {
@@ -148,35 +200,45 @@ pub fn draw(bones: &mut Vec<Bone>, texes: &Vec<Texture2D>, styles: &Vec<&Style>)
                     tex.size.x * bone.scale.x,
                     tex.size.y * bone.scale.y,
                 )),
-                rotation: bone.rot,
+                rotation: bone.rot - visual.pivot_rot,
                 ..Default::default()
             },
         );
+
+        draw_circle(bone.pos.x, bone.pos.y, 5., macroquad::color::RED);
     }
 }
 
 /// Create Macroquad meshes from the given bones and texture data.
-fn create_mesh(bone: &Bone, bone_tex: &Texture, tex2d: &Texture2D) -> Mesh {
+fn create_mesh(
+    visual: &Visuals,
+    tex: &Texture,
+    pivot: &rusty_skelform::Vec2,
+    tex2d: &Texture2D,
+) -> Mesh {
     let mut mesh = Mesh {
         vertices: vec![],
         indices: vec![],
         texture: Some(tex2d.clone()),
     };
 
-    mesh.indices = bone.indices.iter().map(|i| *i as u16).collect();
+    mesh.indices = visual.indices.iter().map(|i| *i as u16).collect();
 
-    let lt_tex_x = bone_tex.offset.x / tex2d.size().x;
-    let lt_tex_y = bone_tex.offset.y / tex2d.size().y;
-    let rb_tex_x = (bone_tex.offset.x + bone_tex.size.x) / tex2d.size().x - lt_tex_x;
-    let rb_tex_y = (bone_tex.offset.y + bone_tex.size.y) / tex2d.size().y - lt_tex_y;
+    let lt_tex_x = tex.offset.x / tex2d.size().x;
+    let lt_tex_y = tex.offset.y / tex2d.size().y;
+    let rb_tex_x = (tex.offset.x + tex.size.x) / tex2d.size().x - lt_tex_x;
+    let rb_tex_y = (tex.offset.y + tex.size.y) / tex2d.size().y - lt_tex_y;
 
-    for v in &bone.vertices {
+    for v in &visual.vertices {
         let uv_x = lt_tex_x + (rb_tex_x * v.uv.x);
         let uv_y = lt_tex_y + (rb_tex_y * v.uv.y);
 
+        let mut pos = v.pos;
+        pos += *pivot;
+
         let white = macroquad::color::WHITE;
         mesh.vertices.push(macroquad::models::Vertex::new(
-            v.pos.x, v.pos.y, 0., uv_x, uv_y, white,
+            pos.x, pos.y, 0., uv_x, uv_y, white,
         ));
     }
 
