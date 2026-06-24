@@ -11,7 +11,7 @@ pub const INSTRUCTIONS: &str = "This is running in a game!";
 
 #[macroquad::main("SkelForm - Macroquad Basic Demo")]
 async fn main() {
-    let armature_filename = "skellington.skf";
+    let armature_filename = "_skellina.skf";
     if !std::fs::exists(armature_filename).unwrap() {
         println!("\n{}\n", ARMATURE_NIL.to_string());
         return;
@@ -42,7 +42,7 @@ async fn main() {
         clear_background(GRAY);
 
         if pos.y < ground_y {
-            vel.y += 0.05;
+            //vel.y += 0.05;
         } else {
             vel.y = 0.;
             pos.y = ground_y
@@ -130,11 +130,12 @@ fn draw_skellington(
     coat: usize,
 ) {
     // process animation(s)
-    let tf0 = time_frame(time, &armature.animations[1], false, true);
+    let tf0 = time_frame(time, &armature.animations[0], false, true);
 
     skf_mq::animate(
         &mut armature.bones,
         &mut armature.inverse_kinematics,
+        &mut armature.visuals,
         &vec![&armature.animations[anim_idx]],
         &vec![tf0],
         &vec![20],
@@ -184,7 +185,7 @@ fn draw_skellington(
     // construct and draw armature
     let velocity = Vec2::new((pos.x - prev_pos.x) * dir, -(pos.y - prev_pos.y)) * 10.;
     let skel_options = skf_mq::ConstructOptions {
-        scale: mqr::Vec2::new(0.125 * dir, 0.125),
+        scale: mqr::Vec2::new(0.35, 0.35),
         position: Vec2::new(pos.x, pos.y),
         velocity,
         ..Default::default()
@@ -192,8 +193,12 @@ fn draw_skellington(
     skf_mq::construct(armature, &skel_options);
 
     let styles = &vec![
-        //&armature.styles[coat],
-        armature.styles.last().unwrap(),
+        &armature.styles[2],
     ];
-    skf_mq::draw(&mut armature.constructed_bones, &texes, styles);
+    skf_mq::draw(
+        &mut armature.constructed_bones,
+        &armature.visuals,
+        &texes,
+        styles,
+    );
 }
