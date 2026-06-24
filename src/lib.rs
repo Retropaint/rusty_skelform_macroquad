@@ -164,12 +164,21 @@ pub fn draw(
         }
         let tex = tex.unwrap();
 
+        // move bone based on pivot
+        let mut pivot_pos = visual.pivot_pos * tex.size;
+        pivot_pos = rusty_skelform::rotate_vec2(&pivot_pos, -bone.rot) * bone.scale;
+        // invert Y, since Macroquad is -Y
+        pivot_pos.y = -pivot_pos.y;
+
         // render bone as mesh
         if visual.vertices.len() > 0 {
             let atlas_idx = tex.atlas_idx as usize;
-            draw_mesh(&create_mesh(&visual, &tex, &texes[atlas_idx]));
+            draw_mesh(&create_mesh(&visual, &tex, &pivot_pos, &texes[atlas_idx]));
             continue;
         }
+
+        // add bone position to pivot, so it can be used as the source of truth for tex pos
+        pivot_pos += bone.pos;
 
         // Macroquad's sprite origin is top-left, so this will align them to center origin
         let push_center = tex.size / 2. * bone.scale;
@@ -177,8 +186,8 @@ pub fn draw(
         // render bone as regular rect
         draw_texture_ex(
             &texes[tex.atlas_idx as usize],
-            bone.pos.x - push_center.x,
-            bone.pos.y - push_center.y,
+            pivot_pos.x - push_center.x,
+            pivot_pos.y - push_center.y,
             col,
             DrawTextureParams {
                 source: Some(Rect {
@@ -191,15 +200,22 @@ pub fn draw(
                     tex.size.x * bone.scale.x,
                     tex.size.y * bone.scale.y,
                 )),
-                rotation: bone.rot,
+                rotation: bone.rot - visual.pivot_rot,
                 ..Default::default()
             },
         );
+
+        draw_circle(bone.pos.x, bone.pos.y, 5., macroquad::color::RED);
     }
 }
 
 /// Create Macroquad meshes from the given bones and texture data.
-fn create_mesh(visual: &Visuals, tex: &Texture, tex2d: &Texture2D) -> Mesh {
+fn create_mesh(
+    visual: &Visuals,
+    tex: &Texture,
+    pivot: &rusty_skelform::Vec2,
+    tex2d: &Texture2D,
+) -> Mesh {
     let mut mesh = Mesh {
         vertices: vec![],
         indices: vec![],
@@ -217,9 +233,12 @@ fn create_mesh(visual: &Visuals, tex: &Texture, tex2d: &Texture2D) -> Mesh {
         let uv_x = lt_tex_x + (rb_tex_x * v.uv.x);
         let uv_y = lt_tex_y + (rb_tex_y * v.uv.y);
 
+        let mut pos = v.pos;
+        pos += *pivot;
+
         let white = macroquad::color::WHITE;
         mesh.vertices.push(macroquad::models::Vertex::new(
-            v.pos.x, v.pos.y, 0., uv_x, uv_y, white,
+            pos.x, pos.y, 0., uv_x, uv_y, white,
         ));
     }
 
