@@ -110,7 +110,9 @@ pub fn construct(armature: &mut Armature, options: &ConstructOptions) {
             physics.global_pos -= rusty_skelform::Vec2::new(options.velocity.x, options.velocity.y);
         }
 
-        rusty_skelform::check_flip(bone, options_scale);
+        if is_facing_left(options_scale) {
+            bone.rot = -bone.rot;
+        }
 
         if let Some(visual) = armature.visuals.get_mut(bone.visuals_id as usize) {
             for vert in &mut visual.vertices {
@@ -164,9 +166,13 @@ pub fn draw(
         }
         let tex = tex.unwrap();
 
-        // move bone based on pivot
+        // will be used to flip pivot transforms if necessary
+        let is_left = rusty_skelform::is_facing_left(bone.scale);
+        let dir = if is_left { 1. } else { -1. };
+
+        // setup pivot
         let mut pivot_pos = visual.pivot_pos * tex.size;
-        pivot_pos = rusty_skelform::rotate_vec2(&pivot_pos, -bone.rot) * bone.scale;
+        pivot_pos = rotate_vec2(&pivot_pos, bone.rot * dir) * bone.scale * visual.pivot_scale;
         // invert Y, since Macroquad is -Y
         pivot_pos.y = -pivot_pos.y;
 
@@ -177,17 +183,14 @@ pub fn draw(
             continue;
         }
 
-        // add bone position to pivot, so it can be used as the source of truth for tex pos
-        pivot_pos += bone.pos;
-
         // Macroquad's sprite origin is top-left, so this will align them to center origin
         let push_center = tex.size / 2. * bone.scale;
 
         // render bone as regular rect
         draw_texture_ex(
             &texes[tex.atlas_idx as usize],
-            pivot_pos.x - push_center.x,
-            pivot_pos.y - push_center.y,
+            bone.pos.x + (pivot_pos.x - push_center.x),
+            bone.pos.y + (pivot_pos.y - push_center.y),
             col,
             DrawTextureParams {
                 source: Some(Rect {
@@ -200,12 +203,10 @@ pub fn draw(
                     tex.size.x * bone.scale.x,
                     tex.size.y * bone.scale.y,
                 )),
-                rotation: bone.rot - visual.pivot_rot,
+                rotation: bone.rot + visual.pivot_rot * dir,
                 ..Default::default()
             },
         );
-
-        draw_circle(bone.pos.x, bone.pos.y, 5., macroquad::color::RED);
     }
 }
 
