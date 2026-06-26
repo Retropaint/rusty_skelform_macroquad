@@ -11,7 +11,7 @@ pub const INSTRUCTIONS: &str = "This is running in a game!";
 
 #[macroquad::main("SkelForm - Macroquad Basic Demo")]
 async fn main() {
-    let armature_filename = "_skellina.skf";
+    let armature_filename = "skellington.skf";
     if !std::fs::exists(armature_filename).unwrap() {
         println!("\n{}\n", ARMATURE_NIL.to_string());
         return;
@@ -130,16 +130,16 @@ fn draw_skellington(
     coat: usize,
 ) {
     // process animation(s)
-    let tf0 = time_frame(time, &armature.animations[0], false, true);
+    //let tf0 = time_frame(time, &armature.animations[0], false, true);
 
-    skf_mq::animate(
-        &mut armature.bones,
-        &mut armature.inverse_kinematics,
-        &mut armature.visuals,
-        &vec![&armature.animations[anim_idx]],
-        &vec![tf0],
-        &vec![20],
-    );
+    //skf_mq::animate(
+    //    &mut armature.bones,
+    //    &mut armature.inverse_kinematics,
+    //    &mut armature.visuals,
+    //    &vec![&armature.animations[anim_idx]],
+    //    &vec![tf0],
+    //    &vec![20],
+    //);
 
     // these will be used later for immutable edits before construction
     let bones = &mut armature.bones;
@@ -192,9 +192,7 @@ fn draw_skellington(
     };
     skf_mq::construct(armature, &skel_options);
 
-    let styles = &vec![
-        &armature.styles[2],
-    ];
+    let styles = &vec![&armature.styles[3]];
     skf_mq::draw(
         &mut armature.constructed_bones,
         &armature.visuals,
