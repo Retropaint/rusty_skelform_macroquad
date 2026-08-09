@@ -234,8 +234,7 @@ fn create_mesh(
         let uv_x = lt_tex_x + (rb_tex_x * v.uv.x);
         let uv_y = lt_tex_y + (rb_tex_y * v.uv.y);
 
-        let mut pos = v.pos;
-        pos += *pivot;
+        let pos = v.pos + *pivot;
 
         let white = macroquad::color::WHITE;
         mesh.vertices.push(macroquad::models::Vertex::new(
@@ -244,4 +243,17 @@ fn create_mesh(
     }
 
     mesh
+}
+
+pub fn time_frame(
+    time: std::time::Instant,
+    animation: &Animation,
+    reverse: bool,
+    is_loop: bool,
+) -> u32 {
+    rusty_skelform::time_frame(time, animation, reverse, is_loop)
+}
+
+pub fn format_frame(frame: u32, animation: &Animation, reverse: bool, is_loop: bool) -> u32 {
+    rusty_skelform::format_frame(frame, animation, reverse, is_loop)
 }
