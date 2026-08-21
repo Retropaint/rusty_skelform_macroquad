@@ -158,6 +158,19 @@ pub fn draw(
     texes: &Vec<Texture2D>,
     styles: &Vec<&Style>,
 ) {
+    // propagate hidden status to bone children
+    let mut hiddens = vec![false; bones.len()];
+    for bone in bones.into_iter() {
+        let mut hidden = bone.hidden || false;
+        if bone.parent_id != -1 && hiddens[bone.parent_id as usize] {
+            hidden = true;
+        }
+        hiddens[bone.id as usize] = hidden;
+        if hidden {
+            continue;
+        }
+    }
+
     // bones with higher zindex should render first
     bones.sort_by(|a, b| {
         // get A zindex
@@ -179,7 +192,7 @@ pub fn draw(
 
     let col = Color::from_rgba(255, 255, 255, 255);
     for bone in bones {
-        if bone.visuals_id == -1 {
+        if hiddens[bone.id as usize] || bone.visuals_id == -1 {
             continue;
         }
 
@@ -192,6 +205,13 @@ pub fn draw(
             continue;
         }
         let tex = tex.unwrap();
+
+        let color = Color::from_rgba(
+            (visual.tint.r * 255.) as u8,
+            (visual.tint.g * 255.) as u8,
+            (visual.tint.b * 255.) as u8,
+            (visual.tint.a * 255.) as u8,
+        );
 
         // will be used to flip pivot transforms if necessary
         let is_left = rusty_skelform::is_facing_left(bone.scale);
@@ -206,7 +226,8 @@ pub fn draw(
         // render bone as mesh
         if visual.vertices.len() > 0 {
             let atlas_idx = tex.atlas_idx as usize;
-            draw_mesh(&create_mesh(&visual, &tex, &pivot_pos, &texes[atlas_idx]));
+            let atlas = &texes[atlas_idx];
+            draw_mesh(&create_mesh(&visual, &tex, &pivot_pos, atlas, color));
             continue;
         }
 
@@ -218,7 +239,7 @@ pub fn draw(
             &texes[tex.atlas_idx as usize],
             bone.pos.x + (pivot_pos.x - push_center.x),
             bone.pos.y + (pivot_pos.y - push_center.y),
-            col,
+            color,
             DrawTextureParams {
                 source: Some(Rect {
                     x: tex.offset.x,
@@ -243,6 +264,7 @@ fn create_mesh(
     tex: &Texture,
     pivot: &rusty_skelform::Vec2,
     tex2d: &Texture2D,
+    color: Color,
 ) -> Mesh {
     let mut mesh = Mesh {
         vertices: vec![],
@@ -263,9 +285,8 @@ fn create_mesh(
 
         let pos = v.pos + *pivot;
 
-        let white = macroquad::color::WHITE;
         mesh.vertices.push(macroquad::models::Vertex::new(
-            pos.x, pos.y, 0., uv_x, uv_y, white,
+            pos.x, pos.y, 0., uv_x, uv_y, color,
         ));
     }
 
