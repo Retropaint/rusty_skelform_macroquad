@@ -423,7 +423,7 @@ dependencies = [
 
 [[package]]
 name = "rusty_skelform_macroquad"
-version = "0.7.4"
+version = "0.8.0"
 dependencies = [
  "macroquad",
  "quad-gl",
