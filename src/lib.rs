@@ -158,19 +158,6 @@ pub fn draw(
     texes: &Vec<Texture2D>,
     styles: &Vec<&Style>,
 ) {
-    // propagate hidden status to bone children
-    let mut hiddens = vec![false; bones.len()];
-    for bone in bones.into_iter() {
-        let mut hidden = bone.hidden || false;
-        if bone.parent_id != -1 && hiddens[bone.parent_id as usize] {
-            hidden = true;
-        }
-        hiddens[bone.id as usize] = hidden;
-        if hidden {
-            continue;
-        }
-    }
-
     // bones with higher zindex should render first
     bones.sort_by(|a, b| {
         // get A zindex
@@ -190,9 +177,8 @@ pub fn draw(
         a_zindex.partial_cmp(&b_zindex).unwrap()
     });
 
-    let col = Color::from_rgba(255, 255, 255, 255);
     for bone in bones {
-        if hiddens[bone.id as usize] || bone.visuals_id == -1 {
+        if bone.hidden || bone.visuals_id == -1 {
             continue;
         }
 
