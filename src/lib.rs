@@ -237,7 +237,7 @@ pub fn draw(
                     tex.size.x * bone.scale.x * visual.pivot_scale.x,
                     tex.size.y * bone.scale.y * visual.pivot_scale.y,
                 )),
-                rotation: bone.rot + visual.pivot_rot * dir,
+                rotation: (bone.rot + visual.pivot_rot) * dir,
                 ..Default::default()
             },
         );
