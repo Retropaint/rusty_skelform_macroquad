@@ -414,6 +414,8 @@ dependencies = [
 [[package]]
 name = "rusty_skelform"
 version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c68da70620c3e5638df094daa3da508a33de9d2d7da664fb659fafa54e01a100"
 dependencies = [
  "serde",
  "zip",
