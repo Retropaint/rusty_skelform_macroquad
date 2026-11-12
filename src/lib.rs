@@ -204,8 +204,8 @@ pub fn draw(
         let dir = if is_left { 1. } else { -1. };
 
         // setup pivot
-        let mut pivot_pos = visual.pivot_pos * tex.size;
-        pivot_pos = rotate_vec2(&pivot_pos, bone.rot * dir) * bone.scale * visual.pivot_scale;
+        let mut pivot_pos =
+            rotate_vec2(&(visual.pivot_pos * bone.scale * tex.size), bone.rot * dir);
         // invert Y, since Macroquad is -Y
         pivot_pos.y = -pivot_pos.y;
 
@@ -218,7 +218,7 @@ pub fn draw(
         }
 
         // Macroquad's sprite origin is top-left, so this will align them to center origin
-        let push_center = tex.size / 2. * bone.scale;
+        let push_center = tex.size / 2. * bone.scale * visual.pivot_scale;
 
         // render bone as regular rect
         draw_texture_ex(
@@ -234,8 +234,8 @@ pub fn draw(
                     h: tex.size.y,
                 }),
                 dest_size: Some(macroquad::prelude::Vec2::new(
-                    tex.size.x * bone.scale.x,
-                    tex.size.y * bone.scale.y,
+                    tex.size.x * bone.scale.x * visual.pivot_scale.x,
+                    tex.size.y * bone.scale.y * visual.pivot_scale.y,
                 )),
                 rotation: bone.rot + visual.pivot_rot * dir,
                 ..Default::default()

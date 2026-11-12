@@ -413,9 +413,7 @@ dependencies = [
 
 [[package]]
 name = "rusty_skelform"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "105144d3d5cbbb877f17fa888acba5a1582ae64cd594c3ddf367ef6d67f3e707"
+version = "0.9.1"
 dependencies = [
  "serde",
  "zip",
@@ -423,7 +421,7 @@ dependencies = [
 
 [[package]]
 name = "rusty_skelform_macroquad"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "macroquad",
  "quad-gl",
