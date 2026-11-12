@@ -205,7 +205,7 @@ pub fn draw(
 
         // setup pivot
         let mut pivot_pos =
-            rotate_vec2(&(visual.pivot_pos * bone.scale * tex.size), bone.rot * dir);
+            rotate_vec2(&(visual.pivot_pos * tex.size), bone.rot * dir) * bone.scale;
         // invert Y, since Macroquad is -Y
         pivot_pos.y = -pivot_pos.y;
 
@@ -237,7 +237,7 @@ pub fn draw(
                     tex.size.x * bone.scale.x * visual.pivot_scale.x,
                     tex.size.y * bone.scale.y * visual.pivot_scale.y,
                 )),
-                rotation: (bone.rot + visual.pivot_rot) * dir,
+                rotation: (bone.rot),
                 ..Default::default()
             },
         );
